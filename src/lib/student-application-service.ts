@@ -1,6 +1,3 @@
-import "server-only";
-
-import { createHash, randomUUID } from "node:crypto";
 import {
   documentTypeLabels,
   requiredDocumentTypes,
@@ -92,6 +89,21 @@ function detectFileSignature(bytes: Uint8Array): "pdf" | "png" | "jpg" | "unknow
   }
 
   return "unknown";
+}
+
+function toHex(value: ArrayLike<number>) {
+  return Array.from(value)
+    .map((part) => part.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function sha256Hex(bytes: Uint8Array) {
+  if (!globalThis.crypto?.subtle) {
+    throw new Error("Web Crypto API not available.");
+  }
+
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return toHex(new Uint8Array(digest));
 }
 
 function expectedSignaturesByExtension(extension: string): Array<"pdf" | "png" | "jpg"> {
@@ -382,10 +394,10 @@ function updateDocumentResult(documentId: string, result: VerificationResult) {
 
 export async function enqueueUpload(documentType: DocumentType, file: File) {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const checksum = createHash("sha256").update(bytes).digest("hex");
+  const checksum = await sha256Hex(bytes);
   const existingChecksums = new Set(store.documents.map((document) => document.checksum));
 
-  const documentId = randomUUID();
+  const documentId = globalThis.crypto.randomUUID();
   const pendingRecord: UploadedDocument = {
     id: documentId,
     fileName: file.name,

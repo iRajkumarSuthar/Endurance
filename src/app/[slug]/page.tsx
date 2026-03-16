@@ -1,5 +1,16 @@
 import { BlankPage } from "@/components/blank-page";
 
+export const dynamicParams = false;
+
+export async function generateStaticParams() {
+  return [
+    { slug: "about" },
+    { slug: "resources" },
+    { slug: "terms" },
+    { slug: "apply-now" },
+  ];
+}
+
 type SlugPageProps = {
   params: Promise<{ slug: string }>;
 };

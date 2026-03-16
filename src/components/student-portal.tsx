@@ -1,8 +1,9 @@
 "use client";
 
-import { useDeferredValue, useEffect, useRef, useState, startTransition } from "react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
+import { enqueueUpload, getApplicationState } from "@/lib/student-application-service";
 import {
   documentTypeLabels,
   requiredDocumentTypes,
@@ -11,16 +12,6 @@ import {
   type DocumentType,
   type UploadedDocument,
 } from "@/lib/student-application-schema";
-
-const emptyState: ApplicationState = {
-  applicationId: "APP-STUDENT-0001",
-  progressPercent: 0,
-  requiredDocuments: requiredDocumentTypes,
-  missingDocuments: requiredDocumentTypes,
-  uploadedDocuments: [],
-  alerts: [],
-  updatedAt: "",
-};
 
 const panelReveal = {
   hidden: { opacity: 0, y: 24 },
@@ -85,21 +76,12 @@ function getRequirementStatus(documentType: DocumentType, documents: UploadedDoc
   return "missing";
 }
 
-async function loadState(signal?: AbortSignal) {
-  const response = await fetch("/api/application/state", {
-    cache: "no-store",
-    signal,
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to fetch application state.");
-  }
-
-  return (await response.json()) as ApplicationState;
+function loadState() {
+  return getApplicationState();
 }
 
 export function StudentPortal() {
-  const [state, setState] = useState<ApplicationState>(emptyState);
+  const [state, setState] = useState<ApplicationState>(loadState());
   const [selectedType, setSelectedType] = useState<DocumentType>("passport");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -109,39 +91,27 @@ export function StudentPortal() {
   const deferredDocuments = useDeferredValue(state.uploadedDocuments);
 
   useEffect(() => {
-    const controller = new AbortController();
     let disposed = false;
 
-    const refresh = async (signal?: AbortSignal) => {
-      const nextState = await loadState(signal);
+    const refresh = () => {
+      const nextState = loadState();
       if (disposed) {
         return;
       }
 
-      startTransition(() => {
-        setState(nextState);
-        setReady(true);
-        setError("");
-      });
+      setState(nextState);
+      setReady(true);
+      setError("");
     };
 
-    refresh(controller.signal).catch(() => {
-      if (!disposed) {
-        setError("Unable to load live application state.");
-      }
-    });
+    refresh();
 
     const intervalId = window.setInterval(() => {
-      refresh().catch(() => {
-        if (!disposed) {
-          setError("Unable to refresh live application state.");
-        }
-      });
-    }, 2000);
+      refresh();
+    }, 1200);
 
     return () => {
       disposed = true;
-      controller.abort();
       window.clearInterval(intervalId);
     };
   }, []);
@@ -158,25 +128,9 @@ export function StudentPortal() {
     setSubmitting(true);
 
     try {
-      const formData = new FormData();
-      formData.append("documentType", selectedType);
-      formData.append("file", selectedFile);
-
-      const response = await fetch("/api/application/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error || "Upload failed.");
-      }
-
-      const nextState = await loadState();
-      startTransition(() => {
-        setState(nextState);
-        setError("");
-      });
+      await enqueueUpload(selectedType, selectedFile);
+      setState(loadState());
+      setError("");
 
       setSelectedFile(null);
       if (fileInputRef.current) {
@@ -422,7 +376,7 @@ export function StudentPortal() {
                 </h2>
               </div>
               <div className="text-right text-sm text-[var(--foreground-soft)]">
-                {ready ? "Polling every 2 seconds" : "Loading live state"}
+                {ready ? "Checking local state" : "Loading local state"}
               </div>
             </div>
 
