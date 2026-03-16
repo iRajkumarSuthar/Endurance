@@ -33,7 +33,7 @@ Endurance is a student document intake portal for study-abroad applications with
 ## Active Execution Plan
 
 - Active plan file: `implementation_plan.md`
-- Current plan step: Step 3 — Persist application and user data
+- Current plan step: Step 4 — Add authentication and role model
 - Current step rationale: Step 2 completed runtime env validation, CSP/headers, and security middleware baseline.
 
 ## Implemented Files
@@ -54,6 +54,7 @@ Endurance is a student document intake portal for study-abroad applications with
 - `implementation_plan.md`
 - `src/lib/server-config.ts`
 - `middleware.ts`
+- `src/lib/application-store.ts`
 
 ## Git and Remote Notes
 - Branch: `master`
@@ -71,15 +72,14 @@ Endurance is a student document intake portal for study-abroad applications with
 - If Firebase is re-added, use a deployment path that supports Next.js APIs (not static-only hosting).
 
 ## Known Notes
-- The current verification store is in-memory (MVP).
-- For production: move state and documents to persistent DB/object storage.
+- The verification state is now persisted in-browser via a local persistence layer (`localStorage`-backed demo table model).
+- For production: move the same table model to server-backed DB/object storage.
 - `tmp_pdf/` is excluded from source control.
 
 ## Immediate Next Changes (when requested)
-1. Persist application documents/state to database and file storage.
-2. Add stronger document authenticity checks (OCR / anti-tamper service).
-3. Improve portal UI states and accessibility.
-4. Add auth/role separation for students vs reviewers.
+1. Add stronger document authenticity checks (OCR / anti-tamper service).
+2. Improve portal UI states and accessibility.
+3. Add auth/role separation for students vs reviewers.
 
 ## Instructions for future work
 Before every new change request, refer to this file first to align on:

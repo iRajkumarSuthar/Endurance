@@ -49,6 +49,54 @@ export type ApplicationAlert = {
   message: string;
 };
 
+export type UserRecord = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: "student" | "reviewer" | "admin";
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ApplicationRecord = {
+  id: string;
+  userId: string;
+  status: "active" | "on_hold" | "complete";
+  requiredDocuments: DocumentType[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ApplicationDocumentRecord = UploadedDocument & {
+  applicationId: string;
+  userId: string;
+  checkIds: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type VerificationCheckRecord = VerificationCheck & {
+  id: string;
+  applicationId: string;
+  documentId: string;
+  createdAt: string;
+};
+
+export type ApplicationEventRecord = {
+  id: string;
+  applicationId: string;
+  eventType: "document_added" | "document_result_updated" | "recheck_requested";
+  payload: Record<string, string>;
+  createdAt: string;
+};
+
+export type ApplicationAlertRecord = ApplicationAlert & {
+  applicationId: string;
+  createdAt: string;
+  resolvedAt?: string;
+  dedupeKey: string;
+};
+
 export type ApplicationState = {
   applicationId: string;
   progressPercent: number;

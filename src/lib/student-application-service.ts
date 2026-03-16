@@ -7,6 +7,20 @@ import {
   type UploadedDocument,
   type VerificationCheck,
 } from "@/lib/student-application-schema";
+import {
+  DEMO_APPLICATION_ID,
+  DEMO_USER_ID,
+  appendApplicationEvent,
+  appendVerificationChecks,
+  getApplicationRecord,
+  getChecksForDocument,
+  getDocumentById,
+  getDocumentsForApplication,
+  listChecksumsForApplication,
+  ensureApplicationData,
+  updateDocument,
+  writeDocument,
+} from "@/lib/application-store";
 
 type VerificationResult = {
   status: "verified" | "rejected";
@@ -15,15 +29,13 @@ type VerificationResult = {
   rejectionReason?: string;
 };
 
-type AppStore = {
+type AppEntity = {
+  applicationId: string;
   documents: UploadedDocument[];
-  updatedAt: number;
 };
 
-const store: AppStore = {
-  documents: [],
-  updatedAt: Date.now(),
-};
+const APPLICATION_ID = DEMO_APPLICATION_ID;
+const USER_ID = DEMO_USER_ID;
 
 const MIN_FILE_SIZE_BYTES = 20 * 1024;
 const MAX_FILE_SIZE_BYTES = 12 * 1024 * 1024;
@@ -122,6 +134,37 @@ function expectedSignaturesByExtension(extension: string): Array<"pdf" | "png" |
   return [];
 }
 
+function withDocumentChecks(document: UploadedDocument): UploadedDocument {
+  if (document.checks.length > 0) {
+    return document;
+  }
+
+  const persistedChecks = getChecksForDocument(document.id);
+  if (persistedChecks.length === 0) {
+    return document;
+  }
+
+  return {
+    ...document,
+    checks: persistedChecks,
+  };
+}
+
+function readApplicationState(): AppEntity {
+  const persisted = getApplicationRecord(APPLICATION_ID);
+  const documents = getDocumentsForApplication(APPLICATION_ID).map(withDocumentChecks);
+
+  const hasFallback = persisted && persisted.id;
+  if (!hasFallback) {
+    ensureApplicationData(USER_ID, APPLICATION_ID);
+  }
+
+  return {
+    applicationId: persisted?.id ?? APPLICATION_ID,
+    documents: documents.sort((a, b) => Date.parse(b.uploadedAt) - Date.parse(a.uploadedAt)),
+  };
+}
+
 function buildAlerts(state: {
   missingDocuments: DocumentType[];
   documents: UploadedDocument[];
@@ -167,9 +210,29 @@ function buildAlerts(state: {
   return alerts;
 }
 
+function latestUpdateDate(entity: AppEntity, fallback: string) {
+  let latest = Date.parse(fallback);
+
+  for (const document of entity.documents) {
+    const uploadedAt = Date.parse(document.uploadedAt);
+    if (!Number.isNaN(uploadedAt) && uploadedAt > latest) {
+      latest = uploadedAt;
+    }
+  }
+
+  if (Number.isNaN(latest)) {
+    return new Date().toISOString();
+  }
+
+  return new Date(latest).toISOString();
+}
+
 function computeState(): ApplicationState {
+  ensureApplicationData(USER_ID, APPLICATION_ID);
+  const applicationRecord = getApplicationRecord(APPLICATION_ID);
+  const entity = readApplicationState();
   const verifiedByType = new Set<DocumentType>();
-  for (const document of store.documents) {
+  for (const document of entity.documents) {
     if (document.status === "verified") {
       verifiedByType.add(document.documentType);
     }
@@ -180,20 +243,20 @@ function computeState(): ApplicationState {
     ((requiredDocumentTypes.length - missingDocuments.length) / requiredDocumentTypes.length) * 100
   );
 
+  const alerts = buildAlerts({
+    missingDocuments,
+    documents: entity.documents,
+    progressPercent,
+  });
+
   return {
-    applicationId: "APP-STUDENT-0001",
+    applicationId: applicationRecord?.id ?? APPLICATION_ID,
     progressPercent,
     requiredDocuments: requiredDocumentTypes,
     missingDocuments,
-    uploadedDocuments: [...store.documents].sort(
-      (a, b) => Date.parse(b.uploadedAt) - Date.parse(a.uploadedAt)
-    ),
-    alerts: buildAlerts({
-      missingDocuments,
-      documents: store.documents,
-      progressPercent,
-    }),
-    updatedAt: new Date(store.updatedAt).toISOString(),
+    uploadedDocuments: entity.documents,
+    alerts,
+    updatedAt: latestUpdateDate(entity, applicationRecord?.updatedAt ?? new Date().toISOString()),
   };
 }
 
@@ -376,60 +439,80 @@ function runAutomatedVerification(args: {
 }
 
 function updateDocumentResult(documentId: string, result: VerificationResult) {
-  const index = store.documents.findIndex((document) => document.id === documentId);
-  if (index < 0) {
+  const document = getDocumentById(documentId);
+  if (!document) {
     return;
   }
 
-  const existing = store.documents[index];
-  store.documents[index] = {
-    ...existing,
+  const updated = updateDocument(documentId, {
     status: result.status,
     authenticityScore: result.authenticityScore,
     rejectionReason: result.rejectionReason,
     checks: result.checks,
-  };
-  store.updatedAt = Date.now();
+  });
+
+  if (!updated) {
+    return;
+  }
+
+  appendVerificationChecks(document.applicationId, documentId, result.checks);
+  appendApplicationEvent({
+    applicationId: document.applicationId,
+    eventType: "document_result_updated",
+    payload: {
+      documentId,
+      status: result.status,
+      score: String(result.authenticityScore),
+      rejectionReason: result.rejectionReason ?? "",
+    },
+  });
 }
 
 export async function enqueueUpload(documentType: DocumentType, file: File) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const checksum = await sha256Hex(bytes);
-  const existingChecksums = new Set(store.documents.map((document) => document.checksum));
-
-  const documentId = globalThis.crypto.randomUUID();
-  const pendingRecord: UploadedDocument = {
-    id: documentId,
+  const existingChecksums = listChecksumsForApplication(APPLICATION_ID);
+  const uploadedAt = new Date().toISOString();
+  const { user, application } = ensureApplicationData(USER_ID, APPLICATION_ID);
+  const result = runAutomatedVerification({
+    fileName: file.name,
+    fileSize: file.size,
+    mimeType: file.type || "application/octet-stream",
+    checksum,
+    documentType,
+    bytes,
+    existingChecksums,
+  });
+  const pendingRecord = writeDocument({
+    applicationId: application.id,
+    userId: user.id,
     fileName: file.name,
     fileSize: file.size,
     mimeType: file.type || "application/octet-stream",
     checksum,
     documentType,
     status: "verifying",
-    uploadedAt: new Date().toISOString(),
     authenticityScore: 0,
-    checks: [],
-  };
+    uploadedAt,
+  });
 
-  store.documents.push(pendingRecord);
-  store.updatedAt = Date.now();
-
-  const result = runAutomatedVerification({
-    fileName: pendingRecord.fileName,
-    fileSize: pendingRecord.fileSize,
-    mimeType: pendingRecord.mimeType,
-    checksum,
-    documentType,
-    bytes,
-    existingChecksums,
+  appendApplicationEvent({
+    applicationId: application.id,
+    eventType: "document_added",
+    payload: {
+      documentId: pendingRecord.id,
+      documentType,
+      checksum,
+      fileName: file.name,
+    },
   });
 
   const randomDelay = 900 + Math.floor(Math.random() * 1400);
   setTimeout(() => {
-    updateDocumentResult(documentId, result);
+    updateDocumentResult(pendingRecord.id, result);
   }, randomDelay);
 
-  return { documentId };
+  return { documentId: pendingRecord.id };
 }
 
 export function getApplicationState() {

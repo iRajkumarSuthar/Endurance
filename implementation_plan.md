@@ -11,7 +11,7 @@
 
 ## Current Step
 
-- Step 3
+- Step 4
 
 ## Step 1 â€” Lock final production architecture
 
