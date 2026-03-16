@@ -1,4 +1,4 @@
-# Endurance Project Context
+﻿# Endurance Project Context
 
 ## Purpose
 Endurance is a student document intake portal for study-abroad applications with automated verification logic and live status updates.
@@ -33,8 +33,8 @@ Endurance is a student document intake portal for study-abroad applications with
 ## Active Execution Plan
 
 - Active plan file: `implementation_plan.md`
-- Current plan step: Step 2 � Base security and environment hardening
-- Current step rationale: Step 1 locked stack, removed static export dependency, and documented environment contracts.
+- Current plan step: Step 3 — Persist application and user data
+- Current step rationale: Step 2 completed runtime env validation, CSP/headers, and security middleware baseline.
 
 ## Implemented Files
 - `src/app/portal/page.tsx`
@@ -51,6 +51,9 @@ Endurance is a student document intake portal for study-abroad applications with
 - `README.md`
 - `.env.example`
 - `next.config.ts`
+- `implementation_plan.md`
+- `src/lib/server-config.ts`
+- `middleware.ts`
 
 ## Git and Remote Notes
 - Branch: `master`
@@ -73,11 +76,10 @@ Endurance is a student document intake portal for study-abroad applications with
 - `tmp_pdf/` is excluded from source control.
 
 ## Immediate Next Changes (when requested)
-1. Base security and environment hardening (env validation, CSP, secure headers, secrets hygiene).
-2. Persist application documents/state to a database and file storage.
-3. Add stronger document authenticity checks (OCR / anti-tamper service).
-4. Improve portal UI states and accessibility.
-5. Add auth/role separation for students vs reviewers.
+1. Persist application documents/state to database and file storage.
+2. Add stronger document authenticity checks (OCR / anti-tamper service).
+3. Improve portal UI states and accessibility.
+4. Add auth/role separation for students vs reviewers.
 
 ## Instructions for future work
 Before every new change request, refer to this file first to align on:

@@ -1,4 +1,4 @@
-# Production Implementation Plan for Endurance
+﻿# Production Implementation Plan for Endurance
 
 ## How to use this file
 
@@ -11,9 +11,9 @@
 
 ## Current Step
 
-- Step 2
+- Step 3
 
-## Step 1 — Lock final production architecture
+## Step 1 â€” Lock final production architecture
 
 - Decide and document the backend stack:
   - Recommended for this codebase: Next.js (server-rendered) + Firebase Auth + Firestore + Cloud Storage + Cloud Functions, or Supabase/Postgres equivalent.
@@ -23,7 +23,7 @@
 - Define required environment variables and secret names.
 - Files to update: `package.json`, `next.config.ts`, `.env.example`, `README.md`, `PROJECT_CONTEXT.md`.
 
-## Step 2 — Base security and environment hardening
+## Step 2 â€” Base security and environment hardening
 
 - Add runtime configuration and secret management for API keys.
 - Add centralized runtime validation for env vars (e.g., `serverConfig` module with strict schema).
@@ -31,7 +31,7 @@
 - Enforce HTTPS, secure cookies, and session timeout policies.
 - Files to update: `.env.example`, `src/lib/*` (new config utility), `next.config.ts`.
 
-## Step 3 — Persist application and user data
+## Step 3 â€” Persist application and user data
 
 - Replace in-memory store with persistent database collections/tables:
   - users
@@ -46,7 +46,7 @@
 - Ensure idempotent writes and unique document keys.
 - Files to update: new backend schema/migration files and existing service layer.
 
-## Step 4 — Add authentication and role model
+## Step 4 â€” Add authentication and role model
 
 - Implement student authentication and reviewer/admin roles.
 - Add protected routes:
@@ -56,7 +56,7 @@
 - Add account recovery and session invalidation patterns.
 - Files to update: auth middleware/route guards, session handling, portal layout or route handlers.
 
-## Step 5 — Server-side upload API and signed file ingress
+## Step 5 â€” Server-side upload API and signed file ingress
 
 - Move upload intake from client-only service to API endpoint.
 - Create one-time signed upload URLs or multipart upload endpoint.
@@ -68,7 +68,7 @@
 - Store initial document metadata immediately in DB with status `verifying`.
 - Files to update: new API routes, upload handler, object storage upload policy, `student-application-service.ts` refactor.
 
-## Step 6 — Secure file storage and anti-tamper controls
+## Step 6 â€” Secure file storage and anti-tamper controls
 
 - Persist files in private object storage buckets (no public read).
 - Generate checksum at storage ingress and compare with DB record.
@@ -77,7 +77,7 @@
 - Add server-side metadata validation for suspicious characteristics.
 - Files to update: storage layer config, processing workers, schema fields (checksum, storagePath, scanState).
 
-## Step 7 — Implement async automated authenticity pipeline
+## Step 7 â€” Implement async automated authenticity pipeline
 
 - Build a verification worker queue:
   - pick pending documents
@@ -91,7 +91,7 @@
 - Emit immutable check evidence for each document (code, status, detail, timestamp).
 - Files to update: verification worker modules + queue config + DB writebacks.
 
-## Step 8 — Required-document rule engine
+## Step 8 â€” Required-document rule engine
 
 - Build declarative rule evaluation on persisted state:
   - missing required documents
@@ -105,14 +105,14 @@
 - Ensure alert IDs are deterministic and deduplicated.
 - Files to update: backend state service, alerts service, schema/events.
 
-## Step 9 — Real-time state sync
+## Step 9 â€” Real-time state sync
 
 - Replace frequent polling with push updates (SSE/WebSocket/long-poll fallback).
 - Keep polling fallback only if infra constraints require.
 - Add optimistic UI states for upload queue and verification status.
 - Files to update: `student-portal.tsx`, API stream endpoint, state hooks.
 
-## Step 10 — Triggered notifications and communications
+## Step 10 â€” Triggered notifications and communications
 
 - Add notification handlers for:
   - missing required files
@@ -123,7 +123,7 @@
 - Prevent duplicate notifications (idempotency keys).
 - Files to update: notification service + UI alert surfaces.
 
-## Step 11 — Frontend integration and UX for production
+## Step 11 â€” Frontend integration and UX for production
 
 - Align portal UX to persisted APIs:
   - submit + progress + alert history + verification feed
@@ -133,7 +133,7 @@
 - Add loading, error, and retry states tied to actual backend statuses.
 - Files to update: `src/components/student-portal.tsx`, route components, shared UI primitives.
 
-## Step 12 — Reviewer and support workflow
+## Step 12 â€” Reviewer and support workflow
 
 - Add reviewer dashboard:
   - list by status
@@ -143,7 +143,7 @@
 - Add audit log export and evidence download for each decision.
 - Files to update: new reviewer route(s), actions APIs, permissions.
 
-## Step 13 — Resilience, retries, and failure handling
+## Step 13 â€” Resilience, retries, and failure handling
 
 - Add retry/backoff for transient verification/storage failures.
 - Add dead-letter queue for permanently failing documents.
@@ -151,7 +151,7 @@
 - Add circuit breakers for third-party checks.
 - Files to update: worker orchestration + monitoring hooks + alert rules.
 
-## Step 14 — Compliance, security, and legal safeguards
+## Step 14 â€” Compliance, security, and legal safeguards
 
 - Add data retention and deletion policy UI/API.
 - Log access and mutations with immutable audit events.
@@ -160,7 +160,7 @@
 - Ensure CORS, XSS, CSRF, and file download controls are enforced.
 - Files to update: backend middlewares, storage ACLs, policy docs.
 
-## Step 15 — Deployment and environment parity
+## Step 15 â€” Deployment and environment parity
 
 - Add CI/CD pipeline:
   - lint
@@ -172,7 +172,7 @@
 - Update `README.md` and `PROJECT_CONTEXT.md`.
 - Files to update: GitHub Actions / CI config, env examples, deployment docs.
 
-## Step 16 — Observability and production monitoring
+## Step 16 â€” Observability and production monitoring
 
 - Add telemetry for:
   - upload rates
@@ -183,7 +183,7 @@
 - Add dashboards and alert thresholds.
 - Files to update: monitoring scripts/config + observability integrations.
 
-## Step 17 — Hardening acceptance checklist and launch
+## Step 17 â€” Hardening acceptance checklist and launch
 
 - Run acceptance scenarios:
   - one student uploads all docs correctly
@@ -194,4 +194,5 @@
 - Confirm legal/security review and incident response plan.
 - Freeze and tag production-ready release.
 - Files to update: final docs, release notes, `PROJECT_CONTEXT.md`.
+
 

@@ -1,4 +1,4 @@
-# Endurance Portal
+ï»¿# Endurance Portal
 
 Endurance is a student-facing portal for study-abroad document intake.
 The site includes upload verification, missing-document alerts, and progress tracking.
@@ -23,16 +23,20 @@ The site includes upload verification, missing-document alerts, and progress tra
 
 ## Productionization status
 
-- Step 1 is in progress/now locked: production architecture selected
+- Step 1 is complete: production architecture locked
   - Server-rendered Next.js app with API routes and server-side verification flow
   - Firebase-backed authentication, document metadata, and storage in the architecture target
-- `next.config.ts` no longer uses static export mode (`output: "export"` removed)
-- `.env.example` defines required runtime contracts for Firebase and verification settings
+- Step 2 is implemented: security and environment hardening baseline
+  - `next.config.ts` now applies strict security headers and CSP
+  - Centralized runtime validation in `src/lib/server-config.ts`
+  - HTTPS/session policy enforcement scaffold in `middleware.ts`
+  - `output: "export"` remains removed
+- `.env.example` includes required runtime contracts for Firebase and verification settings
 
 ## State behavior (current)
 
 - Current behavior remains in-memory for local MVP and preview workflows.
-- Production persistence and async verification services are planned in Step 2 onward.
+- Production persistence and async verification services are planned in Step 3 onward.
 
 ## Local development
 
@@ -57,17 +61,17 @@ If Firebase is added, keep deployment path aligned with Next.js server rendering
 
 ## Project structure
 
-- `src/app/portal/page.tsx` — portal route
-- `src/components/student-portal.tsx` — upload + verification UI
-- `src/lib/student-application-schema.ts` — document types and state models
-- `src/lib/student-application-service.ts` — verification and state logic (MVP baseline)
-- `src/components/animated-home.tsx` — marketing/home hero
-- `src/components/site-header.tsx` — global header
-- `src/components/plus-burst-nav.tsx` — hero/nav utility
-- `src/app/[slug]/page.tsx` — static slug page
-- `src/app/layout.tsx` — app shell
-- `src/app/globals.css` — global styling
-- `implementation_plan.md` — step-by-step production execution plan
+- `src/app/portal/page.tsx` â€” portal route
+- `src/components/student-portal.tsx` â€” upload + verification UI
+- `src/lib/student-application-schema.ts` â€” document types and state models
+- `src/lib/student-application-service.ts` â€” verification and state logic (MVP baseline)
+- `src/components/animated-home.tsx` â€” marketing/home hero
+- `src/components/site-header.tsx` â€” global header
+- `src/components/plus-burst-nav.tsx` â€” hero/nav utility
+- `src/app/[slug]/page.tsx` â€” static slug page
+- `src/app/layout.tsx` â€” app shell
+- `src/app/globals.css` â€” global styling
+- `implementation_plan.md` â€” step-by-step production execution plan
 
 ## Notes
 
