@@ -122,6 +122,7 @@ export function AnimatedHome() {
             <Link
               href="/portal"
               className="inline-flex w-full items-center justify-center border border-black bg-black px-4 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-black/90"
+              style={{ color: "#ffffff" }}
             >
               Upload documents
             </Link>
@@ -163,6 +164,7 @@ export function AnimatedHome() {
             <Link
               href="/portal"
               className="group inline-flex items-center gap-4 border border-black bg-black px-6 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-white"
+              style={{ color: "#ffffff" }}
             >
               Start Uploading
               <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>

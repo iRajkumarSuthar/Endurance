@@ -237,6 +237,33 @@ export function getDocumentById(documentId: string) {
   return hydrateTable().documents.find((document) => document.id === documentId) ?? null;
 }
 
+export function deleteDocument(documentId: string) {
+  const store = hydrateTable();
+  const document = store.documents.find((item) => item.id === documentId);
+  if (!document) {
+    return false;
+  }
+
+  store.documents = store.documents.filter((item) => item.id !== documentId);
+  store.verificationChecks = store.verificationChecks.filter((check) => check.documentId !== documentId);
+  store.events = store.events.filter(
+    (event) => !(event.applicationId === document.applicationId && event.payload.documentId === documentId)
+  );
+  for (const [token, session] of Object.entries(inMemoryUploadSessions)) {
+    if (session.documentId === documentId) {
+      delete inMemoryUploadSessions[token];
+    }
+  }
+
+  const application = store.applications.find((item) => item.id === document.applicationId);
+  if (application) {
+    application.updatedAt = nowIso();
+  }
+
+  persistStore(store);
+  return true;
+}
+
 export function writeDocument(input: NewDocumentInput, id?: string): ApplicationDocumentRecord {
   const store = hydrateTable();
   const documentId = id ?? createId("doc");
@@ -318,7 +345,14 @@ export function appendVerificationChecks(applicationId: string, documentId: stri
 }
 
 export function getChecksForDocument(documentId: string) {
-  return hydrateTable().verificationChecks.filter((item) => item.documentId === documentId);
+  const store = hydrateTable();
+  const document = store.documents.find((item) => item.id === documentId);
+  if (!document || document.checkIds.length === 0) {
+    return store.verificationChecks.filter((item) => item.documentId === documentId);
+  }
+
+  const activeCheckIds = new Set(document.checkIds);
+  return store.verificationChecks.filter((item) => item.documentId === documentId && activeCheckIds.has(item.id));
 }
 
 export function appendApplicationEvent(input: NewEventInput) {
@@ -393,6 +427,29 @@ export function clearAlerts(applicationId: string) {
       alert.resolvedAt = now;
       alert.updatedAt = now;
     }
+  }
+
+  persistStore(store);
+}
+
+export function clearApplicationPacket(applicationId: string) {
+  const store = hydrateTable();
+
+  store.documents = store.documents.filter((document) => document.applicationId !== applicationId);
+  store.verificationChecks = store.verificationChecks.filter((check) => check.applicationId !== applicationId);
+  store.alerts = store.alerts.filter((alert) => alert.applicationId !== applicationId);
+  store.events = store.events.filter((event) => event.applicationId !== applicationId);
+
+  for (const [token, session] of Object.entries(inMemoryUploadSessions)) {
+    if (session.applicationId === applicationId) {
+      delete inMemoryUploadSessions[token];
+    }
+  }
+
+  const application = store.applications.find((item) => item.id === applicationId);
+  if (application) {
+    application.status = "active";
+    application.updatedAt = nowIso();
   }
 
   persistStore(store);

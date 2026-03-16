@@ -103,6 +103,14 @@ export function getDocumentById(documentId: string) {
   return Promise.resolve(demoStore.getDocumentById(documentId));
 }
 
+export function deleteDocument(documentId: string) {
+  if (useBackendStore) {
+    return Promise.reject(new Error("Document deletion is not available in backend mode yet."));
+  }
+
+  return Promise.resolve(demoStore.deleteDocument(documentId));
+}
+
 export function writeDocument(input: NewDocumentInput, id?: string) {
   if (useBackendStore) {
     return backendStore.writeDocument(input);
@@ -167,6 +175,14 @@ export function clearAlerts(applicationId: string) {
   }
 
   return Promise.resolve(demoStore.clearAlerts(applicationId));
+}
+
+export function clearApplicationPacket(applicationId: string) {
+  if (useBackendStore) {
+    return Promise.reject(new Error("Application reset is only available in local demo mode."));
+  }
+
+  return Promise.resolve(demoStore.clearApplicationPacket(applicationId));
 }
 
 export function getAlertsForApplication(applicationId: string) {

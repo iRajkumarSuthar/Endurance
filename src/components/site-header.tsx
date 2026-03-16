@@ -62,7 +62,9 @@ export function SiteHeader() {
             </span>
           </Link>
 
-          <PlusBurstNav buttonClassName="h-[40px] w-[40px] sm:h-[46px] sm:w-[46px]" />
+          <div className="flex items-center">
+            <PlusBurstNav buttonClassName="h-[40px] w-[40px] sm:h-[46px] sm:w-[46px]" />
+          </div>
         </div>
       </div>
     </header>

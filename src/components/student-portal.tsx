@@ -3,7 +3,12 @@
 import { useDeferredValue, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
-import { enqueueUpload, getApplicationState } from "@/lib/student-application-service";
+import {
+  deleteUploadedDocument,
+  enqueueUpload,
+  getApplicationState,
+  resetApplicationPacket,
+} from "@/lib/student-application-service";
 import {
   documentTypeLabels,
   requiredDocumentTypes,
@@ -92,11 +97,31 @@ export function StudentPortal() {
   });
   const [selectedType, setSelectedType] = useState<DocumentType>("passport");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [activeDocumentId, setActiveDocumentId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deletingDocumentId, setDeletingDocumentId] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const errorTimeoutRef = useRef<number | null>(null);
   const deferredDocuments = useDeferredValue(state.uploadedDocuments);
+
+  function clearScheduledError() {
+    if (errorTimeoutRef.current !== null) {
+      window.clearTimeout(errorTimeoutRef.current);
+      errorTimeoutRef.current = null;
+    }
+  }
+
+  function showError(message: string, durationMs = 6000) {
+    setError(message);
+    clearScheduledError();
+    errorTimeoutRef.current = window.setTimeout(() => {
+      setError("");
+      errorTimeoutRef.current = null;
+    }, durationMs);
+  }
 
   useEffect(() => {
     let disposed = false;
@@ -110,13 +135,12 @@ export function StudentPortal() {
 
         setState(nextState);
         setReady(true);
-        setError("");
       } catch (submissionError) {
         if (disposed) {
           return;
         }
 
-        setError(
+        showError(
           submissionError instanceof Error ? submissionError.message : "Unable to refresh application state."
         );
       }
@@ -131,15 +155,28 @@ export function StudentPortal() {
     return () => {
       disposed = true;
       window.clearInterval(intervalId);
+      clearScheduledError();
     };
   }, []);
 
+  useEffect(() => {
+    if (deferredDocuments.length === 0) {
+      setActiveDocumentId(null);
+      return;
+    }
+
+    if (!activeDocumentId || !deferredDocuments.some((document) => document.id === activeDocumentId)) {
+      setActiveDocumentId(deferredDocuments[0].id);
+    }
+  }, [activeDocumentId, deferredDocuments]);
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    clearScheduledError();
     setError("");
 
     if (!selectedFile) {
-      setError("Choose a file before submitting.");
+      showError("Choose a file before submitting.");
       return;
     }
 
@@ -155,7 +192,7 @@ export function StudentPortal() {
         fileInputRef.current.value = "";
       }
     } catch (submissionError) {
-      setError(
+      showError(
         submissionError instanceof Error ? submissionError.message : "Unexpected upload failure."
       );
     } finally {
@@ -163,8 +200,89 @@ export function StudentPortal() {
     }
   }
 
+  async function handleResetApplication() {
+    if (state.uploadedDocuments.length === 0 || resetting || submitting) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Reset the application packet and remove all uploaded documents so you can upload them again?"
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setResetting(true);
+
+    try {
+      const nextState = await resetApplicationPacket();
+      setState(nextState);
+      setSelectedFile(null);
+      setError("");
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (submissionError) {
+      showError(
+        submissionError instanceof Error
+          ? submissionError.message
+          : "Unable to reset the application packet."
+      );
+    } finally {
+      setResetting(false);
+    }
+  }
+
+  async function handleDeleteDocument(documentId: string, fileName: string) {
+    if (submitting || resetting || deletingDocumentId) {
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete ${fileName} from this application packet?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingDocumentId(documentId);
+    setError("");
+
+    try {
+      setState(await deleteUploadedDocument(documentId));
+    } catch (submissionError) {
+      showError(
+        submissionError instanceof Error ? submissionError.message : "Unable to delete this uploaded document."
+      );
+    } finally {
+      setDeletingDocumentId(null);
+    }
+  }
+
   const hasPendingChecks = state.uploadedDocuments.some((document) => document.status === "verifying");
   const verifiedCount = requiredDocumentTypes.length - state.missingDocuments.length;
+  const activeDocumentIndex = deferredDocuments.findIndex((document) => document.id === activeDocumentId);
+  const resolvedDocumentIndex = activeDocumentIndex >= 0 ? activeDocumentIndex : 0;
+  const activeDocument = deferredDocuments[resolvedDocumentIndex];
+
+  function showPreviousDocument() {
+    if (deferredDocuments.length < 2 || !activeDocument) {
+      return;
+    }
+
+    const nextIndex =
+      resolvedDocumentIndex === 0 ? deferredDocuments.length - 1 : resolvedDocumentIndex - 1;
+    setActiveDocumentId(deferredDocuments[nextIndex].id);
+  }
+
+  function showNextDocument() {
+    if (deferredDocuments.length < 2 || !activeDocument) {
+      return;
+    }
+
+    const nextIndex =
+      resolvedDocumentIndex === deferredDocuments.length - 1 ? 0 : resolvedDocumentIndex + 1;
+    setActiveDocumentId(deferredDocuments[nextIndex].id);
+  }
 
   return (
     <main className="min-h-screen bg-white text-[var(--foreground)]">
@@ -193,9 +311,19 @@ export function StudentPortal() {
                 <Link
                   href="/"
                   className="inline-flex items-center gap-3 border border-black bg-black px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-black/90"
+                  style={{ color: "#ffffff" }}
                 >
                   Return Home
                 </Link>
+                <button
+                  type="button"
+                  onClick={handleResetApplication}
+                  disabled={state.uploadedDocuments.length === 0 || resetting || submitting}
+                  className="inline-flex items-center gap-3 border border-black bg-black px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-35"
+                  style={{ color: "#ffffff" }}
+                >
+                  {resetting ? "Resetting..." : "Reset Application"}
+                </button>
                 <div className="inline-flex items-center gap-3 border border-black/10 bg-white/70 px-5 py-3 text-sm uppercase tracking-[0.16em] text-[var(--foreground-soft)]">
                   <span className="font-mono">{state.applicationId}</span>
                   <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
@@ -334,8 +462,9 @@ export function StudentPortal() {
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || resetting}
                 className="inline-flex w-full items-center justify-center border border-black bg-black px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-60"
+                style={{ color: "#ffffff" }}
               >
                 {submitting ? "Submitting..." : "Upload and Verify"}
               </button>
@@ -454,113 +583,188 @@ export function StudentPortal() {
 
             <div className="mt-6 space-y-4">
               <AnimatePresence mode="popLayout">
-                {deferredDocuments.length > 0 ? (
-                  deferredDocuments.map((document) => {
-                    const statusTone = {
-                      verified: "bg-[#edf8f1] text-[#1b553b]",
-                      verifying: "bg-[#fff6ea] text-[#985a14]",
-                      rejected: "bg-[#fff0ec] text-[#8d321d]",
-                    }[document.status];
-                    const summary = summarizeChecks(document);
+                {deferredDocuments.length > 0 && activeDocument ? (
+                  <>
+                    <div className="flex flex-col gap-4 border border-black/10 bg-white/72 p-4">
+                      <div className="flex flex-wrap gap-2">
+                        {deferredDocuments.map((document, index) => {
+                          const selected = document.id === activeDocument.id;
+                          const tone = {
+                            verified: "border-[#24704e]/20 bg-[#edf8f1] text-[#1b553b]",
+                            verifying: "border-[#d9862d]/20 bg-[#fff6ea] text-[#985a14]",
+                            rejected: "border-[#c54d2f]/20 bg-[#fff0ec] text-[#8d321d]",
+                          }[document.status];
 
-                    return (
-                      <motion.article
-                        key={document.id}
-                        layout
-                        initial={{ opacity: 0, y: 18 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -12 }}
-                        className="border border-black/10 bg-[var(--panel)] p-5"
-                      >
-                        <div className="flex flex-wrap items-start justify-between gap-4">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-3">
-                              <h3 className="text-lg font-semibold tracking-[-0.03em]">
-                                {document.fileName}
-                              </h3>
-                              <span
-                                className={`px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.22em] ${statusTone}`}
-                              >
-                                {document.status}
+                          return (
+                            <button
+                              key={document.id}
+                              type="button"
+                              onClick={() => setActiveDocumentId(document.id)}
+                              className={`inline-flex items-center gap-3 border px-4 py-3 text-left transition ${
+                                selected
+                                  ? "border-black bg-black text-white"
+                                  : `${tone} hover:border-black/30`
+                              }`}
+                            >
+                              <span className="font-mono text-[11px] uppercase tracking-[0.18em]">
+                                {index + 1}
                               </span>
-                            </div>
-                            <p className="mt-2 text-sm text-[var(--foreground-soft)]">
-                              {documentTypeLabels[document.documentType]} | {formatBytes(document.fileSize)} |{" "}
-                              {document.mimeType || "Unknown MIME"} | Uploaded{" "}
-                              {formatTimestamp(document.uploadedAt)}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--muted)]">
-                              Authenticity score
-                            </p>
-                            <div className="mt-2 text-3xl font-semibold tracking-[-0.05em]">
-                              {document.status === "verifying" ? "--" : document.authenticityScore}
-                            </div>
-                          </div>
+                              <span className="max-w-[12rem] truncate text-sm font-medium">
+                                {document.fileName}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <p className="text-sm text-[var(--foreground-soft)]">
+                          Viewing document {resolvedDocumentIndex + 1} of {deferredDocuments.length}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={showPreviousDocument}
+                            disabled={deferredDocuments.length < 2}
+                            className="inline-flex h-10 w-10 items-center justify-center border border-black/12 bg-white text-lg text-[var(--foreground)] transition hover:border-black/30 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            ←
+                          </button>
+                          <button
+                            type="button"
+                            onClick={showNextDocument}
+                            disabled={deferredDocuments.length < 2}
+                            className="inline-flex h-10 w-10 items-center justify-center border border-black/12 bg-white text-lg text-[var(--foreground)] transition hover:border-black/30 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            →
+                          </button>
                         </div>
+                      </div>
+                    </div>
 
-                        {document.rejectionReason ? (
-                          <div className="mt-4 border border-[#c54d2f]/20 bg-[#fff0ec] px-4 py-3 text-sm text-[#8d321d]">
-                            {document.rejectionReason}
-                          </div>
-                        ) : null}
+                    {(() => {
+                      const document = activeDocument;
+                      const statusTone = {
+                        verified: "bg-[#edf8f1] text-[#1b553b]",
+                        verifying: "bg-[#fff6ea] text-[#985a14]",
+                        rejected: "bg-[#fff0ec] text-[#8d321d]",
+                      }[document.status];
+                      const summary = summarizeChecks(document);
 
-                        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                          <div className="border border-black/10 bg-white/70 px-4 py-3 text-sm text-[var(--foreground-soft)]">
-                            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
-                              Check summary
-                            </p>
-                            <p className="mt-2">
-                              {summary.pass} pass / {summary.warn} warn / {summary.fail} fail
-                            </p>
-                          </div>
-                          <div className="border border-black/10 bg-white/70 px-4 py-3 text-sm text-[var(--foreground-soft)]">
-                            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
-                              Content hash
-                            </p>
-                            <p className="mt-2 font-mono text-[12px]">{document.checksum.slice(0, 16)}...</p>
-                          </div>
-                          <div className="border border-black/10 bg-white/70 px-4 py-3 text-sm text-[var(--foreground-soft)]">
-                            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
-                              Decision
-                            </p>
-                            <p className="mt-2">
-                              {document.status === "verified"
-                                ? "Accepted into application packet."
-                                : document.status === "verifying"
-                                  ? "Awaiting automated review completion."
-                                  : "Rejected until a compliant replacement is uploaded."}
-                            </p>
-                          </div>
-                        </div>
-
-                        {document.checks.length > 0 ? (
-                          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                            {document.checks.map((check) => {
-                              const tone = {
-                                pass: "border-[#24704e]/18 bg-[#edf8f1] text-[#1b553b]",
-                                warn: "border-[#d9862d]/18 bg-[#fff6ea] text-[#985a14]",
-                                fail: "border-[#c54d2f]/18 bg-[#fff0ec] text-[#8d321d]",
-                              }[check.status];
-
-                              return (
-                                <div key={`${document.id}-${check.code}`} className={`border px-4 py-3 ${tone}`}>
-                                  <div className="flex items-center justify-between gap-3">
-                                    <p className="text-sm font-medium">{check.label}</p>
-                                    <span className="font-mono text-[11px] uppercase tracking-[0.22em]">
-                                      {check.status}
-                                    </span>
-                                  </div>
-                                  <p className="mt-2 text-sm leading-6">{check.detail}</p>
+                      return (
+                        <motion.article
+                          key={document.id}
+                          layout
+                          initial={{ opacity: 0, y: 18 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -12 }}
+                          className="border border-black/10 bg-[var(--panel)] p-5"
+                        >
+                          <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-3">
+                                <h3 className="text-lg font-semibold tracking-[-0.03em]">
+                                  {document.fileName}
+                                </h3>
+                                <span
+                                  className={`px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.22em] ${statusTone}`}
+                                >
+                                  {document.status}
+                                </span>
+                              </div>
+                              <p className="mt-2 text-sm text-[var(--foreground-soft)]">
+                                {documentTypeLabels[document.documentType]} | {formatBytes(document.fileSize)} |{" "}
+                                {document.mimeType || "Unknown MIME"} | Uploaded{" "}
+                                {formatTimestamp(document.uploadedAt)}
+                              </p>
+                            </div>
+                            <div className="flex items-start gap-4">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteDocument(document.id, document.fileName)}
+                                disabled={Boolean(deletingDocumentId) || submitting || resetting}
+                                aria-label={`Delete ${document.fileName}`}
+                                title="Delete uploaded file"
+                                className="inline-flex h-10 w-10 items-center justify-center border border-black/12 bg-white text-xl leading-none text-[var(--foreground)] transition hover:border-[#c54d2f]/35 hover:text-[#8d321d] disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                {deletingDocumentId === document.id ? "..." : "×"}
+                              </button>
+                              <div className="text-right">
+                                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-[var(--muted)]">
+                                  Authenticity score
+                                </p>
+                                <div className="mt-2 text-3xl font-semibold tracking-[-0.05em]">
+                                  {document.status === "verifying" ? "--" : document.authenticityScore}
                                 </div>
-                              );
-                            })}
+                              </div>
+                            </div>
                           </div>
-                        ) : null}
-                      </motion.article>
-                    );
-                  })
+
+                          {document.rejectionReason ? (
+                            <div className="mt-4 border border-[#c54d2f]/20 bg-[#fff0ec] px-4 py-3 text-sm text-[#8d321d]">
+                              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[#8d321d]/80">
+                                How to fix this upload
+                              </p>
+                              <p className="mt-2 leading-6">{document.rejectionReason}</p>
+                            </div>
+                          ) : null}
+
+                          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                            <div className="border border-black/10 bg-white/70 px-4 py-3 text-sm text-[var(--foreground-soft)]">
+                              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
+                                Check summary
+                              </p>
+                              <p className="mt-2">
+                                {summary.pass} pass / {summary.warn} warn / {summary.fail} fail
+                              </p>
+                            </div>
+                            <div className="border border-black/10 bg-white/70 px-4 py-3 text-sm text-[var(--foreground-soft)]">
+                              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
+                                Content hash
+                              </p>
+                              <p className="mt-2 font-mono text-[12px]">{document.checksum.slice(0, 16)}...</p>
+                            </div>
+                            <div className="border border-black/10 bg-white/70 px-4 py-3 text-sm text-[var(--foreground-soft)]">
+                              <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--muted)]">
+                                Decision
+                              </p>
+                              <p className="mt-2">
+                                {document.status === "verified"
+                                  ? "Accepted into application packet."
+                                  : document.status === "verifying"
+                                    ? "Awaiting automated review completion."
+                                    : "Rejected until a compliant replacement is uploaded."}
+                              </p>
+                            </div>
+                          </div>
+
+                          {document.checks.length > 0 ? (
+                            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                              {document.checks.map((check) => {
+                                const tone = {
+                                  pass: "border-[#24704e]/18 bg-[#edf8f1] text-[#1b553b]",
+                                  warn: "border-[#d9862d]/18 bg-[#fff6ea] text-[#985a14]",
+                                  fail: "border-[#c54d2f]/18 bg-[#fff0ec] text-[#8d321d]",
+                                }[check.status];
+
+                                return (
+                                  <div key={`${document.id}-${check.code}`} className={`border px-4 py-3 ${tone}`}>
+                                    <div className="flex items-center justify-between gap-3">
+                                      <p className="text-sm font-medium">{check.label}</p>
+                                      <span className="font-mono text-[11px] uppercase tracking-[0.22em]">
+                                        {check.status}
+                                      </span>
+                                    </div>
+                                    <p className="mt-2 text-sm leading-6">{check.detail}</p>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : null}
+                        </motion.article>
+                      );
+                    })()}
+                  </>
                 ) : (
                   <motion.div
                     layout

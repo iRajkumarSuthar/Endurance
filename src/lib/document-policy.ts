@@ -35,6 +35,18 @@ export function getFileExtension(fileName: string) {
   return match ? match[0] : "";
 }
 
+function formatFileSize(bytes: number) {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  if (bytes >= 1024) {
+    return `${Math.round(bytes / 1024)} KB`;
+  }
+
+  return `${bytes} B`;
+}
+
 export function validateUploadRequest(input: {
   documentType: DocumentType;
   fileName: string;
@@ -60,7 +72,9 @@ export function validateUploadRequest(input: {
   }
 
   if (!sizeAllowed) {
-    errors.push(`File size ${input.fileSize} exceeds the ${MAX_FILE_SIZE_BYTES} byte limit.`);
+    errors.push(
+      `File size ${formatFileSize(input.fileSize)} exceeds the ${formatFileSize(MAX_FILE_SIZE_BYTES)} limit.`
+    );
   }
 
   return {

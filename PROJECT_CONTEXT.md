@@ -88,10 +88,14 @@ Endurance is a student document intake portal for study-abroad applications with
 - For production: move the same table model to server-backed DB/object storage.
 - `tmp_pdf/` is excluded from source control.
 - upload flow bug fix: switched ID generation from extracted `randomUUID` function to direct crypto invocation to prevent `Illegal invocation` in browsers where detached method calls are disallowed.
+- The verification feed now uses a single-document viewer with top selectors and left/right navigation instead of stacking every uploaded file vertically.
 - Non-negotiable constraint coverage:
   - Automated authenticity checks must run on every uploaded document.
   - Missing required files must trigger explicit missing-document notifications.
   - State and progress must update automatically after each upload and verification result.
+  - Failed verification must tell the student what to change before re-uploading.
+  - Students must be able to remove incorrect uploads from the packet and replace them.
+  - Removing a duplicate upload must automatically clear duplicate rejection on the surviving file when no duplicate remains.
 
 ## Step 3 Completion Notes
 
@@ -116,6 +120,15 @@ Endurance is a student document intake portal for study-abroad applications with
   - `rejected-documents`
   - `verification-running`
 - Upload flow again exposes a short verification window so in-progress alerts and requirement states are actually visible in the portal.
+
+## Verification Guidance Notes
+
+- Rejected uploads now return actionable remediation guidance instead of only generic failure text.
+- Failed and warning checks explain what the student should change, such as:
+  - re-export as an allowed format
+  - compress the file
+  - upload a non-duplicate document
+  - rename the file clearly for the declared document type
 
 ## Immediate Next Changes (when requested)
 1. Add stronger document authenticity checks (OCR / anti-tamper service).

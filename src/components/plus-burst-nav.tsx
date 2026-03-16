@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 const items = [
   { href: "/", label: "Home", index: "01" },
   { href: "/portal", label: "Portal", index: "02" },
-  { href: "/contact", label: "Contact", index: "03" },
+  { href: "/about", label: "About", index: "03" },
 ];
 
 type PlusBurstNavProps = {
