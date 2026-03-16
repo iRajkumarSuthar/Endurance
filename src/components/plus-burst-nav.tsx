@@ -42,7 +42,7 @@ export function PlusBurstNav({ buttonClassName = "" }: PlusBurstNavProps) {
   }, []);
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="relative z-30">
       <button
         type="button"
         aria-label={open ? "Close navigation" : "Open navigation"}
@@ -69,7 +69,7 @@ export function PlusBurstNav({ buttonClassName = "" }: PlusBurstNavProps) {
             animate={{ opacity: 1, x: 0, scale: 1, filter: "blur(0px)" }}
             exit={{ opacity: 0, x: 10, scale: 0.98, filter: "blur(3px)" }}
             transition={{ type: "spring", stiffness: 290, damping: 26, mass: 0.9 }}
-            className="absolute right-[calc(100%+0.7rem)] top-1/2 -translate-y-1/2 origin-right"
+            className="absolute right-[calc(100%+0.7rem)] top-1/2 z-40 -translate-y-1/2 origin-right"
           >
             <ul className="flex h-[40px] items-stretch border border-black/10 bg-[rgba(255,250,243,0.96)] px-2 py-1 text-[var(--foreground)] shadow-[0_16px_32px_rgba(20,16,13,0.16)] sm:h-[46px]">
               {items.map((item, index) => {

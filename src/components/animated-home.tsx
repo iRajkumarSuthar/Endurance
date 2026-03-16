@@ -41,7 +41,7 @@ export function AnimatedHome() {
         </div>
 
         <div className="relative mx-auto flex min-h-screen w-full max-w-[1800px] flex-col px-5 pb-10 pt-5 text-white sm:px-8 sm:pb-14 sm:pt-6">
-          <div className="flex items-center justify-between border-b border-white/14 px-1 pb-2 sm:px-2">
+          <div className="relative z-20 flex items-center justify-between border-b border-white/14 px-1 pb-2 sm:px-2">
             <Link href="/" aria-label="Endurance Home" className="inline-flex items-center">
               <Image
                 src="/logo.svg"

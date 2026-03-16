@@ -9,25 +9,20 @@ import { PlusBurstNav } from "@/components/plus-burst-nav";
 export function SiteHeader() {
   const pathname = usePathname();
   const isHome = pathname === "/";
-
-  const [homeHeaderVisible, setHomeHeaderVisible] = useState(false);
+  const [headerVisible, setHeaderVisible] = useState(!isHome);
   const lastScrollY = useRef(0);
 
   useEffect(() => {
-    if (!isHome) {
-      return;
-    }
-
     const onScroll = () => {
       const currentY = window.scrollY;
       const delta = currentY - lastScrollY.current;
 
       if (currentY < 220) {
-        setHomeHeaderVisible(false);
+        setHeaderVisible(!isHome);
       } else if (delta < -8) {
-        setHomeHeaderVisible(true);
+        setHeaderVisible(true);
       } else if (delta > 8) {
-        setHomeHeaderVisible(false);
+        setHeaderVisible(false);
       }
 
       lastScrollY.current = currentY;
@@ -38,13 +33,11 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", onScroll);
   }, [isHome]);
 
-  const isVisible = isHome ? homeHeaderVisible : true;
-
   return (
     <header
       className={[
         "fixed inset-x-0 top-0 z-50 transition-all duration-300",
-        isVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0 pointer-events-none",
+        headerVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0 pointer-events-none",
       ].join(" ")}
     >
       <div className="px-4 pt-4 sm:px-6">
