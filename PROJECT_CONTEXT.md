@@ -25,6 +25,17 @@ Endurance is a student document intake portal for study-abroad applications with
   - Rejected files
   - Verification queue status
 
+## Current Scope Decision
+- Active production stack target: Next.js server-capable app (App Router with API routes) + Firebase Auth + Firestore + Cloud Storage.
+- Hosting model for production: server-rendered Next.js deployment (no static-only export).
+- Next.config now intentionally no longer uses `output: "export"`.
+
+## Active Execution Plan
+
+- Active plan file: `implementation_plan.md`
+- Current plan step: Step 2 — Base security and environment hardening
+- Current step rationale: Step 1 locked stack, removed static export dependency, and documented environment contracts.
+
 ## Implemented Files
 - `src/app/portal/page.tsx`
 - `src/components/student-portal.tsx`
@@ -38,6 +49,8 @@ Endurance is a student document intake portal for study-abroad applications with
 - `src/app/globals.css`
 - `COMMIT_STRUCTURE.md`
 - `README.md`
+- `.env.example`
+- `next.config.ts`
 
 ## Git and Remote Notes
 - Branch: `master`
@@ -50,10 +63,9 @@ Endurance is a student document intake portal for study-abroad applications with
 
 ## Firebase Deployment Notes
 - Firebase config files have been removed from the repo.
-- The app remains Next.js static-export friendly through `next.config.ts` with `output: "export"`.
+- Production path is now server-aware and no longer requires static-export-only output.
 - Current operating mode is local-only development.
-- If Firebase is re-added later, use `firebase init hosting` with `out` as the public directory.
-- Do not choose App Hosting or server-side framework options if staying on the free plan.
+- If Firebase is re-added, use a deployment path that supports Next.js APIs (not static-only hosting).
 
 ## Known Notes
 - The current verification store is in-memory (MVP).
@@ -61,13 +73,15 @@ Endurance is a student document intake portal for study-abroad applications with
 - `tmp_pdf/` is excluded from source control.
 
 ## Immediate Next Changes (when requested)
-1. Persist application documents/state to a database and file storage.
-2. Add stronger document authenticity checks (OCR / anti-tamper service).
-3. Improve portal UI states and accessibility.
-4. Add auth/role separation for students vs reviewers.
+1. Base security and environment hardening (env validation, CSP, secure headers, secrets hygiene).
+2. Persist application documents/state to a database and file storage.
+3. Add stronger document authenticity checks (OCR / anti-tamper service).
+4. Improve portal UI states and accessibility.
+5. Add auth/role separation for students vs reviewers.
 
 ## Instructions for future work
 Before every new change request, refer to this file first to align on:
 - Current scope
 - Existing implementation
 - Planned next tasks
+- Current execution step
