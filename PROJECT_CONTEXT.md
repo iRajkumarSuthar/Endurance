@@ -33,9 +33,9 @@ Endurance is a student document intake portal for study-abroad applications with
 ## Active Execution Plan
 
 - Active plan file: `implementationplan.md`
-- Current plan step: Step 2 — Secure Upload Ingress (Replace Client-Only Upload Logic)
-- Current step rationale: Upload now enters through `request-upload-session` API action (`/api/application`), validates declared document metadata server-side, and creates a protected object key placeholder before verification transitions.
-- Next action: add full server-side authenticity workers and immutable check records in Step 3.
+- Current plan step: Step 3 — Automated Authenticity Pipeline (Core Constraint)
+- Current step rationale: UI has been simplified (removed page grid/pattern backgrounds), and Step 3 is now ready to implement.
+- Next action: run every verification check in the server-side pipeline and persist immutable check records.
 
 ## Constraint Baseline Lock (Step 0)
 

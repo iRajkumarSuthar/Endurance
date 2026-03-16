@@ -167,12 +167,8 @@ export function StudentPortal() {
   const verifiedCount = requiredDocumentTypes.length - state.missingDocuments.length;
 
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <section className="relative overflow-hidden border-b border-black/10 bg-[radial-gradient(circle_at_top_left,_rgba(232,109,31,0.18),_transparent_32%),linear-gradient(180deg,_rgba(255,250,243,0.98)_0%,_rgba(244,239,231,0.94)_100%)]">
-        <div className="pointer-events-none absolute inset-0 opacity-60">
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(20,16,13,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(20,16,13,0.06)_1px,transparent_1px)] bg-[size:44px_44px]" />
-        </div>
-
+    <main className="min-h-screen bg-white text-[var(--foreground)]">
+      <section className="border-b border-black/10 bg-white">
         <div className="relative mx-auto max-w-[1500px] px-5 pb-16 pt-32 sm:px-8 sm:pb-20">
           <motion.div
             initial="hidden"
@@ -196,7 +192,7 @@ export function StudentPortal() {
               <div className="mt-10 flex flex-wrap gap-4">
                 <Link
                   href="/"
-                  className="inline-flex items-center gap-3 border border-[var(--foreground)] bg-[var(--foreground)] px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-[var(--background)] transition hover:opacity-90"
+                  className="inline-flex items-center gap-3 border border-black bg-black px-5 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-white transition hover:bg-black/90"
                 >
                   Return Home
                 </Link>
@@ -339,7 +335,7 @@ export function StudentPortal() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex w-full items-center justify-center border border-[var(--foreground)] bg-[var(--foreground)] px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--background)] transition hover:opacity-92 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center border border-black bg-black px-5 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-black/90 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? "Submitting..." : "Upload and Verify"}
               </button>

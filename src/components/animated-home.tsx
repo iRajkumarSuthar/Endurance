@@ -28,7 +28,7 @@ const studyAbroadVideo =
 
 export function AnimatedHome() {
   return (
-    <main className="bg-[var(--background)] text-[var(--foreground)]">
+    <main className="bg-white text-[var(--foreground)]">
       <section className="relative overflow-hidden border-b border-black/10 bg-black">
         <div className="absolute inset-0">
           <iframe
@@ -37,8 +37,7 @@ export function AnimatedHome() {
             allow="autoplay; encrypted-media; picture-in-picture"
             className="pointer-events-none absolute inset-0 h-full w-full scale-[1.55] object-cover opacity-100"
           />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,10,14,0.48)_0%,rgba(8,10,14,0.44)_18%,rgba(8,10,14,0.54)_42%,rgba(8,10,14,0.7)_70%,rgba(8,10,14,0.88)_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.06),transparent_16%),linear-gradient(90deg,rgba(0,0,0,0.3)_0%,rgba(0,0,0,0.14)_42%,rgba(0,0,0,0.32)_100%)]" />
+          <div className="absolute inset-0 bg-black/60" />
         </div>
 
         <div className="relative mx-auto flex min-h-screen w-full max-w-[1800px] flex-col px-5 pb-10 pt-5 text-white sm:px-8 sm:pb-14 sm:pt-6">
@@ -122,7 +121,7 @@ export function AnimatedHome() {
 
             <Link
               href="/portal"
-              className="inline-flex w-full items-center justify-center border border-[var(--foreground)] bg-[var(--foreground)] px-4 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--background)] transition hover:opacity-92"
+              className="inline-flex w-full items-center justify-center border border-black bg-black px-4 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-black/90"
             >
               Upload documents
             </Link>
@@ -163,7 +162,7 @@ export function AnimatedHome() {
             </div>
             <Link
               href="/portal"
-              className="group inline-flex items-center gap-4 border border-[var(--foreground)] bg-[var(--foreground)] px-6 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--background)]"
+              className="group inline-flex items-center gap-4 border border-black bg-black px-6 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-white"
             >
               Start Uploading
               <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
@@ -174,4 +173,3 @@ export function AnimatedHome() {
     </main>
   );
 }
-
